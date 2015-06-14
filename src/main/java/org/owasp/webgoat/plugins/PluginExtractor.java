@@ -21,7 +21,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.owasp.webgoat.plugins.PluginFileUtils.createDirsIfNotExists;
 
 /**
- * Extract the wpf file and place them in the system temp directory in the folder webgoat and collect the files
+ * Extract the jar file and place them in the system temp directory in the folder webgoat and collect the files
  * and classes.
  */
 public class PluginExtractor {

@@ -25,10 +25,9 @@ public class PluginTestHelper {
 
     public static Plugin createPluginFor(Class pluginClass) throws Exception {
         Path pluginTargetPath = Files.createDirectory(Paths.get(tempDirectory.toString(), "pluginTargetPath"));
-        Plugin plugin = new Plugin(pluginTargetPath);
         Map<String, byte[]> classes = new HashMap<>();
         classes.put(pluginClass.getName(), Files.readAllBytes(Paths.get(pathForLoading().toString(), pluginClass.getSimpleName() + ".class")));
-        plugin.loadClasses(classes);
+        Plugin plugin = new Plugin(pluginTargetPath, classes);
         return plugin;
     }
 }

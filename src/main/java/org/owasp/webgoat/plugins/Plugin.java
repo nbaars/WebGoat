@@ -2,9 +2,8 @@ package org.owasp.webgoat.plugins;
 
 import com.google.common.base.Optional;
 import org.owasp.webgoat.lessons.AbstractLesson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
+import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.context.JclContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -26,7 +25,6 @@ public class Plugin {
     private static final String NAME_LESSON_SOLUTION_DIRECTORY = "lessonSolutions";
     private static final String NAME_LESSON_PLANS_DIRECTORY = "lessonPlans";
     private static final String NAME_LESSON_I18N_DIRECTORY = "i18n";
-    private final Logger logger = LoggerFactory.getLogger(Plugin.class);
     private final Path pluginDirectory;
 
     private Class<AbstractLesson> lesson;
@@ -49,26 +47,31 @@ public class Plugin {
         this.pluginDirectory = pluginDirectory;
     }
 
-    public void loadClasses(Map<String, byte[]> classes) {
-        ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        PluginClassLoader pluginClassLoader = new PluginClassLoader(contextClassLoader);
+    public Plugin(Path pluginDirectory, Map<String, byte[]> classes) {
+        this.pluginDirectory = pluginDirectory;
+        findLesson(classes);
+    }
+
+    private void findLesson(Map<String, byte[]> classes) {
         for (Map.Entry<String, byte[]> clazz : classes.entrySet()) {
-            loadClass(pluginClassLoader, clazz.getKey(), clazz.getValue());
-        }
-        if (lesson == null) {
-            throw new PluginLoadingFailure(String
-                    .format("Lesson class not found, following classes were detected in the plugin: %s",
-                            StringUtils.collectionToCommaDelimitedString(classes.keySet())));
+            findLesson(clazz.getKey(), clazz.getValue());
         }
     }
 
-    private void loadClass(PluginClassLoader pluginClassLoader, String name, byte[] classFile) {
+    private void findLesson(String name, byte[] bytes) {
         String realClassName = name.replaceFirst("/", "").replaceAll("/", ".").replaceAll(".class", "");
+        JarClassLoader jcl = JclContext.get();
 
-        Class clazz = pluginClassLoader.loadClass(realClassName, classFile);
-        if (AbstractLesson.class.isAssignableFrom(clazz)) {
-            this.lesson = clazz;
-        }
+
+       // try {
+            //Class clazz = jcl.loadClass(realClassName);
+            Class clazz = PluginClassLoader.CLASS_LOADER.get().loadClass(realClassName,  bytes);
+            if (AbstractLesson.class.isAssignableFrom(clazz)) {
+                this.lesson = clazz;
+            }
+//        } catch (ClassNotFoundException ce) {
+//            throw new PluginLoadingFailure("Cannot load class from jar file", ce);
+//        }
     }
 
     public void loadFiles(List<Path> files, boolean reload) {
@@ -127,12 +130,18 @@ public class Plugin {
         }
     }
 
-    public AbstractLesson getLesson() {
+    /**
+     * Lesson is optional, it is also possible that the supplied jar contains only helper classes.
+     */
+    public Optional<AbstractLesson> getLesson() {
         try {
-            return lesson.newInstance();
+            if (lesson != null ) {
+                return Optional.of(lesson.newInstance());
+            }
         } catch (IllegalAccessException | InstantiationException e) {
             throw new PluginLoadingFailure("Unable to instantiate the lesson " + lesson.getName(), e);
         }
+        return Optional.absent();
     }
 
     public Optional<File> getLessonSolution(String language) {
