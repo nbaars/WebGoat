@@ -9,30 +9,24 @@ import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class PluginsLoader implements Runnable {
 
     protected static final String WEBGOAT_PLUGIN_EXTENSION = "jar";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final Path pluginSource;
-    private final Path classesPath;
     private Path pluginTarget;
 
-    public PluginsLoader(Path pluginSource, Path pluginTarget, Path classesPath) {
+    public PluginsLoader(Path pluginSource, Path pluginTarget) {
         Preconditions.checkNotNull(pluginSource, "plugin source cannot be null");
         Preconditions.checkNotNull(pluginTarget, "plugin target cannot be null");
-        Preconditions.checkNotNull(classesPath, "WEB-INF/classes cannot be null");
 
         this.pluginSource = pluginSource;
         this.pluginTarget = pluginTarget;
-        this.classesPath = classesPath;
     }
 
     public List<Plugin> loadPlugins(final boolean reload) {
@@ -55,7 +49,6 @@ public class PluginsLoader implements Runnable {
                                 plugin.loadFiles(extractor.getFiles(), reload);
                                 plugin.rewritePaths(pluginTarget);
                                 plugins.add(plugin);
-                                copyToClasses(extractor.getClasses());
                             }
                         }
                     } catch (Plugin.PluginLoadingFailure e) {
@@ -71,20 +64,9 @@ public class PluginsLoader implements Runnable {
         return plugins;
     }
 
-    private void copyToClasses(Map<String, byte[]> classes) throws IOException {
-        for (Map.Entry<String, byte[]> clazz : classes.entrySet()) {
-            PluginFileUtils.writeFile(classesPath.resolve(Paths.get(clazz.getKey().substring(1))), clazz.getValue(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
-        }
-    }
-
     @Override
     public void run() {
         loadPlugins(true);
     }
 
-    public static void main(String[] args) {
-        Path path = Paths.get("C:\\workspace\\WebGoat\\target\\webgoat-container-6.1.0\\WEB-INF\\classes");
-        path = path.resolve(Paths.get("org/owasp/"));
-        System.out.println(path.toString());
-    }
 }

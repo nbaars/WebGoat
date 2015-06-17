@@ -19,7 +19,7 @@ public class ResourceBundleClassLoader {
         classLoader.propertiesPath = path;
     }
 
-    public static ClassLoader createPropertyFilesClassLoader(ClassLoader parentClassLoader) {
+    public static ClassLoader createPropertyFilesClassLoader() {
         final List<URL> urls = new ArrayList<>();
 
         try {

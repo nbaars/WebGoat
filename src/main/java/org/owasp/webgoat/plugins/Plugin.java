@@ -1,6 +1,7 @@
 package org.owasp.webgoat.plugins;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import org.owasp.webgoat.lessons.AbstractLesson;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.context.JclContext;
@@ -19,6 +20,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static org.owasp.webgoat.plugins.PluginFileUtils.fileEndsWith;
 import static org.owasp.webgoat.plugins.PluginFileUtils.hasParentDirectoryWithName;
+import static org.owasp.webgoat.plugins.PluginFileUtils.replaceInFiles;
 
 public class Plugin {
 
@@ -30,13 +32,10 @@ public class Plugin {
     private Class<AbstractLesson> lesson;
     private Map<String, File> solutionLanguageFiles = new HashMap<>();
     private Map<String, File> lessonPlansLanguageFiles = new HashMap<>();
+    private List<File> cssFiles = Lists.newArrayList();
     private File lessonSourceFile;
 
     public static class PluginLoadingFailure extends RuntimeException {
-
-        public PluginLoadingFailure(String message) {
-            super(message);
-        }
 
         public PluginLoadingFailure(String message, Exception e) {
             super(message, e);
@@ -62,16 +61,17 @@ public class Plugin {
         String realClassName = name.replaceFirst("/", "").replaceAll("/", ".").replaceAll(".class", "");
         JarClassLoader jcl = JclContext.get();
 
-
-       // try {
-            //Class clazz = jcl.loadClass(realClassName);
-            Class clazz = PluginClassLoader.CLASS_LOADER.get().loadClass(realClassName,  bytes);
+         try {
+             Class clazz = jcl.getLoadedClasses().get(name);
+             if (clazz == null ) {
+                 clazz = jcl.loadClass(realClassName);
+             }
             if (AbstractLesson.class.isAssignableFrom(clazz)) {
                 this.lesson = clazz;
             }
-//        } catch (ClassNotFoundException ce) {
-//            throw new PluginLoadingFailure("Cannot load class from jar file", ce);
-//        }
+        } catch (ClassNotFoundException ce) {
+            throw new PluginLoadingFailure("Cannot load class from jar file", ce);
+        }
     }
 
     public void loadFiles(List<Path> files, boolean reload) {
@@ -87,6 +87,9 @@ public class Plugin {
             }
             if (fileEndsWith(file, ".properties") && hasParentDirectoryWithName(file, NAME_LESSON_I18N_DIRECTORY)) {
                 copyProperties(reload, file);
+            }
+            if (fileEndsWith(file, ".css")) {
+                cssFiles.add(file.toFile());
             }
         }
     }
@@ -117,14 +120,16 @@ public class Plugin {
 
     public void rewritePaths(Path pluginTarget) {
         try {
-            PluginFileUtils.replaceInFiles(this.lesson.getSimpleName() + "_files",
+            replaceInFiles(this.lesson.getSimpleName() + "_files",
                     pluginTarget.getFileName().toString() + "/plugin/" + this.lesson
                             .getSimpleName() + "/lessonSolutions/en/" + this.lesson.getSimpleName() + "_files",
                     solutionLanguageFiles.values());
-            PluginFileUtils.replaceInFiles(this.lesson.getSimpleName() + "_files",
+            replaceInFiles(this.lesson.getSimpleName() + "_files",
                     pluginTarget.getFileName().toString() + "/plugin/" + this.lesson
                             .getSimpleName() + "/lessonPlans/en/" + this.lesson.getSimpleName() + "_files",
                     lessonPlansLanguageFiles.values());
+            replaceInFiles("url\\(images", "url\\(" + pluginTarget.getFileName().toString() + "/plugin/" + this.lesson
+                    .getSimpleName() + "/jsp/images", cssFiles);
         } catch (IOException e) {
             throw new PluginLoadingFailure("Unable to rewrite the paths in the solutions", e);
         }
