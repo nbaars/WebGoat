@@ -27,5 +27,7 @@ src/main/webapp/plugin_extracted/*
 src/main/webapp/users/*.jar
 src/main/webapp/plugin_lessons/*.jar
 src/main/webapp/users/*.props
+classes/*
 
 /*.iml
+.extract/*
