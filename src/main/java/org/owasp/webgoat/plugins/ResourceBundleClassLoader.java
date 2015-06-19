@@ -25,7 +25,7 @@ public class ResourceBundleClassLoader {
         try {
             urls.add(classLoader.propertiesPath.toUri().toURL());
         } catch (IOException e) {
-            throw new Plugin.PluginLoadingFailure("Unable to load the properties for the classloader", e);
+            throw new PluginLoadingFailure("Unable to load the properties for the classloader", e);
         }
         return new URLClassLoader(urls.toArray(new URL[urls.size()]), Thread.currentThread().getContextClassLoader());
     }

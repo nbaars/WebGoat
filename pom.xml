@@ -106,6 +106,16 @@
                     <url>http://localhost:8080/manager</url>
                     <path>/WebGoat</path>
                     <attachArtifactClassifier>exec</attachArtifactClassifier>
+                    <contextReloadable>true</contextReloadable>
+                    <useSeparateTomcatClassLoader>true</useSeparateTomcatClassLoader>
+                    <contextFile>${project.basedir}/src/main/webapp/WEB-INF/context.xml</contextFile>
+                    <extraDependencies>
+                        <extraDependency>
+                            <groupId>org.owasp.webgoat</groupId>
+                            <artifactId>webgoat-classloader</artifactId>
+                            <version>${project.version}</version>
+                        </extraDependency>
+                    </extraDependencies>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -129,9 +139,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.xeustechnologies</groupId>
-            <artifactId>jcl-core</artifactId>
-            <version>2.6</version>
+            <groupId>org.owasp.webgoat</groupId>
+            <artifactId>webgoat-classloader</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>javax.activation</groupId>

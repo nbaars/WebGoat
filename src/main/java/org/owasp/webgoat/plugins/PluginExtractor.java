@@ -1,6 +1,7 @@
 package org.owasp.webgoat.plugins;
 
-import java.io.ByteArrayOutputStream;
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
@@ -14,7 +15,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static java.lang.String.format;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -27,7 +27,7 @@ import static org.owasp.webgoat.plugins.PluginFileUtils.createDirsIfNotExists;
 public class PluginExtractor {
 
     private final Path pluginArchive;
-    private final Map<String, byte[]> classes = new HashMap<>();
+    private final List<String> classes = Lists.newArrayList();
     private final List<Path> files = new ArrayList<>();
 
     public PluginExtractor(Path pluginArchive) {
@@ -41,20 +41,18 @@ public class PluginExtractor {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     if (file.toString().endsWith(".class")) {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        Files.copy(file, bos);
-                        classes.put(file.toString(), bos.toByteArray());
+                        classes.add(file.toString());
                     }
                     files.add(Files.copy(file, createDirsIfNotExists(Paths.get(target.toString(), file.toString())), REPLACE_EXISTING));
                     return FileVisitResult.CONTINUE;
                 }
             });
         } catch (Exception e) {
-            new Plugin.PluginLoadingFailure(format("Unable to extract: %s", pluginArchive.getFileName()), e);
+            new PluginLoadingFailure(format("Unable to extract: %s", pluginArchive.getFileName()), e);
         }
     }
 
-    public Map<String, byte[]> getClasses() {
+    public List<String> getClasses() {
         return this.classes;
     }
 

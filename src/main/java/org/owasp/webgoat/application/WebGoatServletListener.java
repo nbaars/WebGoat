@@ -5,10 +5,6 @@
  */
 package org.owasp.webgoat.application;
 
-import org.xeustechnologies.jcl.JarClassLoader;
-import org.xeustechnologies.jcl.context.DefaultContextLoader;
-import org.xeustechnologies.jcl.context.JclContext;
-
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -28,22 +24,12 @@ public class WebGoatServletListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         ServletContext context = sce.getServletContext();
         context.log("WebGoat is starting");
-        initClassLoader();
         setApplicationVariables(context);
-    }
-
-    private void initClassLoader() {
-        JarClassLoader jcl = new JarClassLoader();
-        DefaultContextLoader context = new DefaultContextLoader(jcl);
-
-        jcl.getLocalLoader().setEnabled(false);
-        context.loadContext();
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         ServletContext context = sce.getServletContext();
-        JclContext.destroy();
         context.log("WebGoat is stopping");
     }
 

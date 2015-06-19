@@ -2,9 +2,8 @@ package org.owasp.webgoat.plugins;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import org.owasp.webgoat.classloader.PluginClassLoader;
 import org.owasp.webgoat.lessons.AbstractLesson;
-import org.xeustechnologies.jcl.JarClassLoader;
-import org.xeustechnologies.jcl.context.JclContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -35,42 +34,33 @@ public class Plugin {
     private List<File> cssFiles = Lists.newArrayList();
     private File lessonSourceFile;
 
-    public static class PluginLoadingFailure extends RuntimeException {
-
-        public PluginLoadingFailure(String message, Exception e) {
-            super(message, e);
-        }
-    }
-
     public Plugin(Path pluginDirectory) {
         this.pluginDirectory = pluginDirectory;
     }
 
-    public Plugin(Path pluginDirectory, Map<String, byte[]> classes) {
+    public Plugin(Path pluginDirectory, List<String> classes) {
         this.pluginDirectory = pluginDirectory;
         findLesson(classes);
     }
 
-    private void findLesson(Map<String, byte[]> classes) {
-        for (Map.Entry<String, byte[]> clazz : classes.entrySet()) {
-            findLesson(clazz.getKey(), clazz.getValue());
+    private void findLesson(List<String> classes) {
+        for (String clazzName : classes) {
+            findLesson(clazzName);
         }
     }
 
-    private void findLesson(String name, byte[] bytes) {
+    private void findLesson(String name) {
         String realClassName = name.replaceFirst("/", "").replaceAll("/", ".").replaceAll(".class", "");
-        JarClassLoader jcl = JclContext.get();
+        PluginClassLoader cl = (PluginClassLoader) Thread.currentThread().getContextClassLoader();
 
-         try {
-             Class clazz = jcl.getLoadedClasses().get(name);
-             if (clazz == null ) {
-                 clazz = jcl.loadClass(realClassName);
-             }
+        try {
+            Class clazz = cl.loadClass(realClassName, true);
+
             if (AbstractLesson.class.isAssignableFrom(clazz)) {
                 this.lesson = clazz;
             }
         } catch (ClassNotFoundException ce) {
-            throw new PluginLoadingFailure("Cannot load class from jar file", ce);
+            throw new PluginLoadingFailure("Class " + realClassName + " listed in jar but unable to load the class.", ce);
         }
     }
 
@@ -100,6 +90,7 @@ public class Plugin {
             Files.copy(file, bos);
             Path propertiesPath = createPropertiesDirectory();
             ResourceBundleClassLoader.setPropertiesPath(propertiesPath);
+            PluginFileUtils.createDirsIfNotExists(file.getParent());
             if (reload) {
                 Files.write(propertiesPath.resolve(file.getFileName()), bos.toByteArray(), CREATE, APPEND);
             } else {
@@ -140,7 +131,7 @@ public class Plugin {
      */
     public Optional<AbstractLesson> getLesson() {
         try {
-            if (lesson != null ) {
+            if (lesson != null) {
                 return Optional.of(lesson.newInstance());
             }
         } catch (IllegalAccessException | InstantiationException e) {
