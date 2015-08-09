@@ -1,4 +1,6 @@
 language: java
+jdk:
+  - oraclejdk7
 script:
   - mvn -f webgoat-classloader clean install
   - mvn clean install
