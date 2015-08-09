@@ -1,4 +1,4 @@
 language: java
 script:
-  - mvn -f webgoat-classloader
-  - mvn install
+  - mvn -f webgoat-classloader clean install
+  - mvn clean install
