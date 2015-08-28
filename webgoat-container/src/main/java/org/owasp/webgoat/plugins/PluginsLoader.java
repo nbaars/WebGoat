@@ -17,9 +17,10 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class PluginsLoader implements Runnable {
 
@@ -38,7 +39,7 @@ public class PluginsLoader implements Runnable {
     }
 
     public List<Plugin> loadPlugins(final boolean reload) {
-        final PluginClassLoader cl = (PluginClassLoader)Thread.currentThread().getContextClassLoader();
+        final PluginClassLoader cl = (PluginClassLoader) Thread.currentThread().getContextClassLoader();
         List<Plugin> plugins = Lists.newArrayList();
 
         try {
@@ -69,11 +70,16 @@ public class PluginsLoader implements Runnable {
 
     private List<Plugin> processPlugins(List<URL> jars, boolean reload) throws Exception {
         final List<Plugin> plugins = Lists.newArrayList();
-        ExecutorService executorService = Executors.newFixedThreadPool(20);
-        List<Future<PluginExtractor>> futures = executorService.invokeAll(extractJars(jars));
+        final ExecutorService executorService = Executors.newFixedThreadPool(20);
+        final CompletionService<PluginExtractor> completionService = new ExecutorCompletionService<>(executorService);
+        final List<Callable<PluginExtractor>> callables = extractJars(jars);
 
-        for (Future<PluginExtractor> future : futures) {
-            PluginExtractor extractor = future.get();
+        for (Callable<PluginExtractor> s : callables) {
+            completionService.submit(s);
+        }
+        int n = callables.size();
+        for (int i = 0; i < n; i++) {
+            PluginExtractor extractor = completionService.take().get();
             Plugin plugin = new Plugin(pluginTarget, extractor.getClasses());
             if (plugin.getLesson().isPresent()) {
                 PluginFileUtils.createDirsIfNotExists(pluginTarget);
